@@ -15,6 +15,27 @@ This file is the repo-local memory for the Daily Classic Game automation. Read i
 
 ## Iteration History
 
+### 2026-06-17 - Canonical Repo Published
+
+Objective: Make the cloned GitHub repository the persisted source of truth for future automation runs.
+
+Completed:
+
+- Committed the migrated baseline on `main`.
+- Pushed `main` to `origin` at `https://github.com/lipk-stack/racing2026.git`.
+- Confirmed generated smoke artifacts are ignored by `.gitignore` so future test runs do not dirty the working tree with screenshots.
+
+Verification:
+
+- Prior to publishing, `npm test` passed.
+- Prior to publishing, `npm run smoke` passed.
+
+Next additions to consider:
+
+- Start the next enhancement from this repo and read this ledger first.
+- Add a visual garage showroom mode with larger rotating car render previews.
+- Add car-specific audio profiles for flat-six, V6 hybrid, V10, and twin-turbo V8 engines.
+
 ### 2026-06-17 - Prototype Baseline Migrated
 
 Objective: Preserve the current playable browser racing game in the new GitHub-backed repository.
