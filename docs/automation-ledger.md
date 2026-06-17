@@ -15,6 +15,33 @@ This file is the repo-local memory for the Daily Classic Game automation. Read i
 
 ## Iteration History
 
+### 2026-06-17 - Career Event Hub
+
+Objective: Move closer to AAA/EA-style racing standards by adding progression, event variety, and persistent reward loops after researching current racing-game benchmarks.
+
+Completed:
+
+- Added `docs/aaa-racing-research.md` with benchmark notes from Need for Speed, Forza Horizon, and current 2026 racing-market coverage.
+- Added data-driven event contracts: Apex Circuit, Bayline Sprint, Precision Time Attack, Speed Trap Chain, and Heat Escape.
+- Added browser-local driver profile persistence with bank, REP, level, wins, event records, and per-car mastery.
+- Added event reward math for rank, speed trap peak speed, time attack pace, heat risk, and style score.
+- Added a career strip and event playlist to the setup screen.
+- Expanded finish results with event name, cash, REP, peak speed, and star rating.
+- Expanded logic and browser smoke tests to cover event/progression behavior.
+
+Verification:
+
+- `npm test` passed.
+- `npm run smoke` passed.
+- Screenshot review found and fixed desktop setup crowding by moving the setup screen into a two-column cockpit layout.
+
+Next additions to consider:
+
+- Add rotating garage showroom previews and a photo mode.
+- Add car-specific engine audio profiles and layered turbo, exhaust, and gear effects.
+- Add upgrade/tuning sliders for tires, aero, nitro, gearbox, and drift/grip bias.
+- Add damage, repair costs, and high-stakes event consequences.
+
 ### 2026-06-17 - Canonical Repo Published
 
 Objective: Make the cloned GitHub repository the persisted source of truth for future automation runs.

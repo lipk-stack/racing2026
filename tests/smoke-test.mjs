@@ -60,6 +60,9 @@ async function main() {
     return {
       title: document.querySelector("h1")?.textContent,
       garageCards: document.querySelectorAll(".garage-card").length,
+      eventCards: document.querySelectorAll(".event-card").length,
+      driverLevel: document.querySelector("#driverLevel")?.textContent,
+      driverCash: document.querySelector("#driverCash")?.textContent,
       selectedModel: document.querySelector("#selectedModel")?.textContent,
       hudModules: document.querySelectorAll(".hud-module").length,
       telemetryItems: document.querySelectorAll(".telemetry-strip strong").length,
@@ -83,12 +86,15 @@ async function main() {
     speed: window.__nightline.state.speed,
     position: window.__nightline.state.position,
     mode: window.__nightline.state.mode,
+    startPanelVisible: document.querySelector("#startPanel")?.classList.contains("is-visible"),
     countdown: window.__nightline.state.countdown,
     gear: document.querySelector("#gearValue")?.textContent,
     grip: document.querySelector("#gripValue")?.textContent,
     apex: document.querySelector("#apexValue")?.textContent,
     heat: document.querySelector("#heatValue")?.textContent,
     evade: document.querySelector("#evadeValue")?.textContent,
+    eventType: window.__nightline.state.eventType,
+    totalLaps: window.__nightline.state.totalLaps,
     slipstreamHelper: window.__nightline.calculateSlipstream(180, 0.08),
     pursuitPressureHelper: window.__nightline.calculatePursuitPressure(120, 0.12, 4),
   }));
@@ -110,17 +116,24 @@ async function main() {
   if (desktop.garageCards < 8 || !desktop.selectedModel?.includes("Porsche")) {
     throw new Error("Prestige garage did not render");
   }
+  if (desktop.eventCards < 5 || desktop.driverLevel !== "1" || !desktop.driverCash?.startsWith("$")) {
+    throw new Error("Career event hub did not render");
+  }
   if (desktop.hudModules < 6 || desktop.telemetryItems < 3 || !desktop.countdown) {
     throw new Error("Racecraft HUD did not render");
   }
   if (afterDrive.mode !== "race" || afterDrive.speed <= 40 || afterDrive.position <= 0) {
     throw new Error("Driving interaction did not advance the race");
   }
+  if (afterDrive.startPanelVisible) throw new Error("Start overlay stayed visible after race start");
   if (!afterDrive.gear || !afterDrive.grip?.endsWith("%") || !afterDrive.apex) {
     throw new Error("Telemetry HUD did not update");
   }
   if (!afterDrive.heat || !afterDrive.evade) {
     throw new Error("Pursuit HUD did not render");
+  }
+  if (afterDrive.eventType !== "circuit" || afterDrive.totalLaps !== 3) {
+    throw new Error("Event state did not initialize");
   }
   if (afterDrive.countdown !== 0 || afterDrive.slipstreamHelper <= 0.45 || afterDrive.pursuitPressureHelper <= 0.75) {
     throw new Error("Countdown, slipstream, or pursuit helper failed");

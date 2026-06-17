@@ -20,6 +20,25 @@
           <h1>Nightline Racer</h1>
         </div>
 
+        <div class="career-strip" aria-label="Driver career">
+          <div>
+            <span>LEVEL</span>
+            <strong id="driverLevel">1</strong>
+          </div>
+          <div>
+            <span>BANK</span>
+            <strong id="driverCash">$25,000</strong>
+          </div>
+          <div>
+            <span>REP</span>
+            <strong id="driverRep">0</strong>
+          </div>
+          <div>
+            <span>WINS</span>
+            <strong id="driverWins">0</strong>
+          </div>
+        </div>
+
         <div id="garageGrid" class="garage-grid" aria-label="Car selection">
         </div>
 
@@ -49,6 +68,9 @@
           </dl>
         </div>
 
+        <div id="eventGrid" class="event-grid" aria-label="Event playlist">
+        </div>
+
         <div class="control-row" role="group" aria-label="Race difficulty">
           <button class="pill is-active" data-difficulty="cruise" type="button">Cruise</button>
           <button class="pill" data-difficulty="street" type="button">Street</button>
@@ -56,7 +78,7 @@
         </div>
 
         <div class="menu-actions">
-          <button id="startRace" class="primary-action" type="button">Start race</button>
+          <button id="startRace" class="primary-action" type="button">Start event</button>
           <button id="timeTrial" class="secondary-action" type="button">Time trial</button>
         </div>
       </section>
@@ -88,6 +110,26 @@
           <div>
             <dt>Style</dt>
             <dd id="resultScore">0</dd>
+          </div>
+          <div>
+            <dt>Event</dt>
+            <dd id="resultEvent">Apex Circuit</dd>
+          </div>
+          <div>
+            <dt>Cash</dt>
+            <dd id="resultCash">$0</dd>
+          </div>
+          <div>
+            <dt>REP</dt>
+            <dd id="resultRep">0</dd>
+          </div>
+          <div>
+            <dt>Peak</dt>
+            <dd id="resultPeak">0 km/h</dd>
+          </div>
+          <div>
+            <dt>Rating</dt>
+            <dd id="resultStars">☆☆☆</dd>
           </div>
         </dl>
         <div class="menu-actions">

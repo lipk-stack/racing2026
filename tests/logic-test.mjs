@@ -1,5 +1,8 @@
 import {
   CARS,
+  EVENTS,
+  calculateDriverLevel,
+  calculateEventReward,
   calculateEvadeProgress,
   calculateGear,
   calculateGripLoad,
@@ -8,6 +11,7 @@ import {
   calculatePursuitPressure,
   calculateSlipstream,
   clamp,
+  createProfile,
   formatTime,
   percentRemaining,
   scoreNearMiss,
@@ -34,6 +38,21 @@ assert("gear stays neutral at launch", calculateGear(0, CARS.porsche911turbo.max
 assert("gear reaches sixth near top speed", calculateGear(310, CARS.porsche911turbo.maxSpeed) === "6");
 assert("grip load drops under hard cornering", calculateGripLoad(1.1, 0.9, 1.5, true) < 70);
 assert("performance index grades supercars highly", calculatePerformanceIndex(CARS.ferrari296) > 920);
+assert("event roster has five contract types", Object.keys(EVENTS).length === 5);
+assert("driver level scales with rep", calculateDriverLevel(3600) === 3);
+const reward = calculateEventReward(EVENTS.speedtrap, {
+  rank: 1,
+  score: 4200,
+  raceTime: 120,
+  maxSpeed: 302,
+  heatLevel: 2,
+  laps: 2,
+});
+assert("speed trap reward pays cash", reward.cash > EVENTS.speedtrap.cash);
+assert("speed trap reward grants stars", reward.stars >= 3);
+const profile = createProfile({ cash: -100, rep: 3600, events: { circuit: { bestStars: 2 } } });
+assert("profile normalizes cash", profile.cash === 0);
+assert("profile preserves event history", profile.events.circuit.bestStars === 2);
 assert("heat level escalates at high pursuit heat", calculateHeatLevel(82) === 4);
 assert("heat level stays clear when calm", calculateHeatLevel(8) === 0);
 assert("pursuit pressure rises near police", calculatePursuitPressure(120, 0.12, 4) > 0.75);

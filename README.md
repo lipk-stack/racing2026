@@ -36,6 +36,8 @@ Touch controls appear automatically on small screens.
 - Pseudo-3D racing road with hills, curves, rumble strips, lane markers, fog, and skyline scenery
 - Prestige sports-car garage with real model/trim references across Porsche, Ferrari, Lamborghini, McLaren, Mercedes-AMG, Audi, BMW, and Nissan
 - Per-car class, horsepower, 0-100 km/h, top-speed, drivetrain, engine, weight, grip, boost, and handling data
+- Career hub with bank, REP, driver level, wins, per-event records, and per-car mastery
+- Event contracts for circuit, sprint, time attack, speed trap, and heat escape race formats
 - Cruise, Street, and Pro difficulty modes
 - Cinematic countdown launch, AI rivals, collision response, off-road grip loss, camera shake, sparks, and boost trails
 - Slipstream drafting, near-miss style scoring, combo multiplier, race director callouts, and opponent proximity arrows
@@ -46,6 +48,8 @@ Touch controls appear automatically on small screens.
 - Assistive projected racing line plus live gear, grip, and upcoming-apex telemetry for better corner setup
 - Responsive HUD with desktop cockpit controls and mobile touch controls
 - No network dependency and no paid APIs
+
+See `docs/aaa-racing-research.md` for the current benchmark notes guiding the path toward AAA-style racing standards.
 
 ## Verification
 

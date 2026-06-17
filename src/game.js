@@ -194,10 +194,77 @@ const PURSUIT = {
   evadeSeconds: 7.5,
 };
 
+const EVENTS = {
+  circuit: {
+    name: "Apex Circuit",
+    tag: "Circuit",
+    objective: "Finish top three across three night laps.",
+    laps: 3,
+    cash: 12500,
+    rep: 950,
+    ranked: true,
+    heatStart: 0,
+  },
+  sprint: {
+    name: "Bayline Sprint",
+    tag: "Sprint",
+    objective: "Two-lap point run with heavier traffic and finish pressure.",
+    laps: 2,
+    cash: 9800,
+    rep: 820,
+    ranked: true,
+    heatStart: 8,
+  },
+  timeattack: {
+    name: "Precision Time Attack",
+    tag: "Time",
+    objective: "Solo clean run. Beat the lap delta and bank mastery.",
+    laps: 1,
+    cash: 7200,
+    rep: 700,
+    ranked: false,
+    targetTime: 74,
+    heatStart: 0,
+  },
+  speedtrap: {
+    name: "Speed Trap Chain",
+    tag: "Speed",
+    objective: "Peak speed decides the payout. Nitro timing matters.",
+    laps: 2,
+    cash: 10800,
+    rep: 900,
+    ranked: false,
+    targetSpeed: 270,
+    heatStart: 18,
+  },
+  pursuit: {
+    name: "Heat Escape",
+    tag: "Pursuit",
+    objective: "Start hot, outrun police pressure, and survive two laps.",
+    laps: 2,
+    cash: 14500,
+    rep: 1250,
+    ranked: false,
+    targetHeat: 3,
+    heatStart: 42,
+  },
+};
+
+const PROFILE_DEFAULT = {
+  cash: 25000,
+  rep: 0,
+  level: 1,
+  wins: 0,
+  events: {},
+  carMastery: {},
+};
+
 const state = {
   mode: "menu",
   selectedCar: "porsche911turbo",
   difficulty: "street",
+  eventType: "circuit",
+  totalLaps: CONFIG.totalLaps,
   timeTrial: false,
   paused: false,
   muted: false,
@@ -221,6 +288,10 @@ const state = {
   drift: 0,
   combo: 0,
   score: 0,
+  eventReward: null,
+  maxSpeedRun: 0,
+  eventBonus: 0,
+  eventStars: 0,
   nearMisses: 0,
   slipstream: 0,
   heat: 0,
@@ -244,6 +315,7 @@ const state = {
   lapPulse: 0,
   finishRank: 6,
   lastFrame: 0,
+  profile: { ...PROFILE_DEFAULT, events: {}, carMastery: {} },
 };
 
 const input = {
@@ -334,6 +406,52 @@ function calculatePerformanceIndex(car) {
   const powerScore = clamp((car.powerHp - 480) * 0.18, 0, 90);
   const handlingScore = clamp((car.handling + car.grip - 1.95) * 95, 0, 90);
   return Math.round(700 + speedScore + launchScore + powerScore + handlingScore);
+}
+
+function calculateDriverLevel(rep) {
+  return clamp(Math.floor(rep / 1800) + 1, 1, 99);
+}
+
+function createProfile(seed = {}) {
+  const profile = {
+    ...PROFILE_DEFAULT,
+    ...seed,
+    events: { ...(seed.events || {}) },
+    carMastery: { ...(seed.carMastery || {}) },
+  };
+  profile.cash = Math.max(0, Number(profile.cash) || 0);
+  profile.rep = Math.max(0, Number(profile.rep) || 0);
+  profile.level = calculateDriverLevel(profile.rep);
+  profile.wins = Math.max(0, Number(profile.wins) || 0);
+  return profile;
+}
+
+function calculateEventReward(event, result) {
+  const rank = result.rank || 6;
+  const rankMultiplier = event.ranked ? [0, 1.35, 1.08, 0.88, 0.58, 0.42, 0.32][rank] || 0.28 : 1;
+  const speedMultiplier = event.targetSpeed
+    ? clamp((result.maxSpeed || 0) / event.targetSpeed, 0.45, 1.38)
+    : 1;
+  const lapAverage = result.laps ? (result.raceTime || 999) / result.laps : result.raceTime || 999;
+  const timeMultiplier = event.targetTime
+    ? clamp(event.targetTime / Math.max(1, lapAverage), 0.62, 1.32)
+    : 1;
+  const heatMultiplier = event.targetHeat ? 1 + clamp(result.heatLevel || 0, 0, 5) * 0.08 : 1;
+  const styleMultiplier = 1 + clamp((result.score || 0) / 10000, 0, 0.42);
+  const cash = Math.round((event.cash * rankMultiplier * speedMultiplier * timeMultiplier * heatMultiplier * styleMultiplier) / 50) * 50;
+  const rep = Math.round((event.rep * rankMultiplier * speedMultiplier * timeMultiplier * heatMultiplier + (result.score || 0) * 0.055) / 10) * 10;
+  const starBasis = event.targetSpeed
+    ? (result.maxSpeed || 0) / event.targetSpeed
+    : event.targetTime
+      ? event.targetTime / Math.max(1, lapAverage)
+      : event.ranked
+        ? (7 - rank) / 6
+        : 0.75 + clamp((result.score || 0) / 10000, 0, 0.3);
+  return {
+    cash: Math.max(0, cash),
+    rep: Math.max(0, rep),
+    stars: clamp(Math.ceil(starBasis * 3), 1, 3),
+  };
 }
 
 function calculateHeatLevel(heat) {
@@ -492,6 +610,7 @@ function populateWorld() {
 
 function resetRivals() {
   rivals.length = 0;
+  if (state.timeTrial) return;
   const colors = ["#31f5ff", "#ffb82f", "#f64f59", "#51ff7b", "#e6e9ef"];
   for (let i = 0; i < 5; i += 1) {
     rivals.push({
@@ -548,9 +667,12 @@ function spawnPoliceUnit(kind, relativeZ, x) {
   });
 }
 
-function resetRace({ trial = false } = {}) {
+function resetRace({ trial = false, eventType = state.eventType } = {}) {
+  const event = EVENTS[eventType] || EVENTS.circuit;
   state.mode = "race";
-  state.timeTrial = trial;
+  state.eventType = eventType;
+  state.timeTrial = trial || eventType === "timeattack";
+  state.totalLaps = state.timeTrial ? event.laps : event.laps || CONFIG.totalLaps;
   state.paused = false;
   state.position = 0;
   state.playerX = 0;
@@ -564,6 +686,10 @@ function resetRace({ trial = false } = {}) {
   state.drift = 0;
   state.combo = 1;
   state.score = 0;
+  state.eventReward = null;
+  state.maxSpeedRun = 0;
+  state.eventBonus = 0;
+  state.eventStars = 0;
   state.nearMisses = 0;
   state.slipstream = 0;
   resetPolice();
@@ -578,10 +704,19 @@ function resetRace({ trial = false } = {}) {
   state.finishRank = 6;
   particles.length = 0;
   resetRivals();
+  if (!state.timeTrial && event.heatStart > 0) {
+    state.heat = event.heatStart;
+    state.heatLevel = calculateHeatLevel(state.heat);
+    if (state.heatLevel > 0) {
+      state.pursuitActive = true;
+      state.pursuitFlash = 1;
+      spawnPoliceUnit("pursuit", -PURSUIT.spawnDistance, randomChoice([-0.58, 0.58]));
+    }
+  }
   hidePanel(dom.startPanel);
   hidePanel(dom.pausePanel);
   hidePanel(dom.finishPanel);
-  setStatus(trial ? "Time trial armed" : "Race armed");
+  setStatus(state.timeTrial ? event.objective : event.name);
   startAudio();
 }
 
@@ -589,6 +724,49 @@ function setStatus(text, duration = 2.4) {
   state.status = text;
   state.statusTimer = duration;
   dom.statusLine.textContent = text;
+}
+
+function loadProfile() {
+  if (typeof localStorage === "undefined") return createProfile();
+  try {
+    const saved = JSON.parse(localStorage.getItem("racing2026.profile") || "{}");
+    return createProfile(saved);
+  } catch {
+    return createProfile();
+  }
+}
+
+function saveProfile() {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem("racing2026.profile", JSON.stringify(state.profile));
+}
+
+function applyEventReward(reward) {
+  const event = EVENTS[state.eventType];
+  const carKey = state.selectedCar;
+  const eventRecord = state.profile.events[state.eventType] || {};
+  const carRecord = state.profile.carMastery[carKey] || {};
+
+  state.profile.cash += reward.cash;
+  state.profile.rep += reward.rep;
+  state.profile.level = calculateDriverLevel(state.profile.rep);
+  if (state.finishRank === 1 || state.timeTrial) state.profile.wins += 1;
+  state.profile.events[state.eventType] = {
+    ...eventRecord,
+    name: event.name,
+    bestStars: Math.max(eventRecord.bestStars || 0, reward.stars),
+    bestScore: Math.max(eventRecord.bestScore || 0, state.score),
+    bestTime: eventRecord.bestTime ? Math.min(eventRecord.bestTime, state.raceTime) : state.raceTime,
+    bestSpeed: Math.max(eventRecord.bestSpeed || 0, Math.round(state.maxSpeedRun)),
+  };
+  state.profile.carMastery[carKey] = {
+    ...carRecord,
+    name: `${CARS[carKey].brand} ${CARS[carKey].model}`,
+    rep: (carRecord.rep || 0) + reward.rep,
+    events: (carRecord.events || 0) + 1,
+  };
+  saveProfile();
+  updateCareerPanel();
 }
 
 function findSegment(z) {
@@ -1586,6 +1764,11 @@ function updateRace(dt) {
   state.speed = clamp(state.speed, 0, maxSpeed);
   state.boost = clamp(state.boost, 0, 100);
   state.gear = calculateGear(state.speed, car.maxSpeed);
+  state.maxSpeedRun = Math.max(state.maxSpeedRun, state.speed);
+  if (EVENTS[state.eventType]?.targetSpeed && state.maxSpeedRun >= EVENTS[state.eventType].targetSpeed && state.directorCooldown === 0) {
+    state.directorCooldown = 3.5;
+    setStatus(`Trap speed ${Math.round(state.maxSpeedRun)} km/h`, 1);
+  }
   state.gripLoad = calculateGripLoad(
     state.playerX,
     speedPercent,
@@ -1660,7 +1843,7 @@ function updateRace(dt) {
     state.lap += 1;
     state.lapPulse = 1;
     state.boost = 100;
-    if (state.lap > CONFIG.totalLaps) {
+    if (state.lap > state.totalLaps) {
       finishRace();
     } else {
       setStatus(`Lap ${state.lap}`, 1.6);
@@ -1686,23 +1869,41 @@ function computePosition() {
 }
 
 function finishRace() {
+  const event = EVENTS[state.eventType] || EVENTS.circuit;
+  const reward = calculateEventReward(event, {
+    rank: state.finishRank,
+    score: state.score,
+    raceTime: state.raceTime,
+    bestLap: state.bestLap,
+    maxSpeed: state.maxSpeedRun,
+    heatLevel: state.heatLevel,
+    laps: state.totalLaps,
+  });
   state.mode = "finished";
   state.paused = false;
   state.speed = 0;
+  state.eventReward = reward;
+  state.eventStars = reward.stars;
+  applyEventReward(reward);
   stopAudio();
   dom.finishTitle.textContent =
-    state.finishRank === 1 ? "Podium finish" : state.finishRank <= 3 ? "Strong finish" : "Run complete";
+    reward.stars >= 3 ? "Elite result" : state.finishRank <= 3 || state.timeTrial ? "Contract paid" : "Run complete";
   dom.resultTime.textContent = formatTime(state.raceTime);
   dom.resultLap.textContent = formatTime(state.bestLap);
   dom.resultPosition.textContent = state.timeTrial ? "Solo" : `${state.finishRank}/${rivals.length + 1}`;
   dom.resultScore.textContent = state.score.toLocaleString("en-US");
+  dom.resultEvent.textContent = event.name;
+  dom.resultCash.textContent = `$${reward.cash.toLocaleString("en-US")}`;
+  dom.resultRep.textContent = `${reward.rep.toLocaleString("en-US")} REP`;
+  dom.resultPeak.textContent = `${Math.round(state.maxSpeedRun)} km/h`;
+  dom.resultStars.textContent = `${"★".repeat(reward.stars)}${"☆".repeat(3 - reward.stars)}`;
   showPanel(dom.finishPanel);
   setStatus("Race complete", 5);
 }
 
 function updateHud() {
   dom.positionValue.textContent = state.timeTrial ? "TT" : state.finishRank;
-  dom.lapValue.textContent = `${Math.min(state.lap, CONFIG.totalLaps)}/${CONFIG.totalLaps}`;
+  dom.lapValue.textContent = `${Math.min(state.lap, state.totalLaps)}/${state.totalLaps}`;
   dom.timeValue.textContent = formatTime(state.raceTime);
   dom.bestValue.textContent = formatTime(state.bestLap);
   dom.speedValue.textContent = Math.round(state.speed);
@@ -1841,6 +2042,33 @@ function updateGarageSpec() {
   dom.selectedDrive.textContent = car.drivetrain;
 }
 
+function renderEvents() {
+  if (!dom.eventGrid) return;
+  dom.eventGrid.innerHTML = "";
+  Object.entries(EVENTS).forEach(([id, event]) => {
+    const record = state.profile.events[id] || {};
+    const button = document.createElement("button");
+    button.className = `event-card${id === state.eventType ? " is-selected" : ""}`;
+    button.dataset.event = id;
+    button.type = "button";
+    button.innerHTML = `
+      <span>${event.tag}</span>
+      <strong>${event.name}</strong>
+      <small>${event.objective}</small>
+      <em>${record.bestStars ? `${record.bestStars}/3 stars` : "New contract"}</em>
+    `;
+    dom.eventGrid.appendChild(button);
+  });
+}
+
+function updateCareerPanel() {
+  if (!dom.driverLevel) return;
+  dom.driverLevel.textContent = state.profile.level;
+  dom.driverCash.textContent = `$${state.profile.cash.toLocaleString("en-US")}`;
+  dom.driverRep.textContent = state.profile.rep.toLocaleString("en-US");
+  dom.driverWins.textContent = state.profile.wins.toLocaleString("en-US");
+}
+
 function togglePause() {
   if (state.mode !== "race") return;
   state.paused = !state.paused;
@@ -1949,6 +2177,8 @@ function bindInputs() {
 
 function bindMenus() {
   renderGarage();
+  renderEvents();
+  updateCareerPanel();
   document.querySelectorAll(".garage-card").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedCar = button.dataset.car;
@@ -1968,15 +2198,29 @@ function bindMenus() {
     });
   });
 
-  dom.startRace.addEventListener("click", () => resetRace({ trial: false }));
-  dom.timeTrial.addEventListener("click", () => resetRace({ trial: true }));
+  dom.eventGrid.addEventListener("click", (event) => {
+    const button = event.target.closest(".event-card");
+    if (!button) return;
+    state.eventType = button.dataset.event;
+    document.querySelectorAll(".event-card").forEach((card) => card.classList.remove("is-selected"));
+    button.classList.add("is-selected");
+    setStatus(EVENTS[state.eventType].objective, 1.8);
+  });
+
+  dom.startRace.addEventListener("click", () => resetRace({ trial: false, eventType: state.eventType }));
+  dom.timeTrial.addEventListener("click", () => {
+    state.eventType = "timeattack";
+    resetRace({ trial: true, eventType: "timeattack" });
+  });
   dom.resumeRace.addEventListener("click", togglePause);
-  dom.restartRace.addEventListener("click", () => resetRace({ trial: state.timeTrial }));
-  dom.nextRace.addEventListener("click", () => resetRace({ trial: state.timeTrial }));
+  dom.restartRace.addEventListener("click", () => resetRace({ trial: state.timeTrial, eventType: state.eventType }));
+  dom.nextRace.addEventListener("click", () => resetRace({ trial: state.timeTrial, eventType: state.eventType }));
   dom.backGarage.addEventListener("click", () => {
     hidePanel(dom.finishPanel);
     showPanel(dom.startPanel);
     state.mode = "menu";
+    renderEvents();
+    updateCareerPanel();
     setStatus("Ready");
   });
 
@@ -2019,6 +2263,11 @@ function assignDom() {
   dom.pausePanel = $("pausePanel");
   dom.finishPanel = $("finishPanel");
   dom.garageGrid = $("garageGrid");
+  dom.eventGrid = $("eventGrid");
+  dom.driverLevel = $("driverLevel");
+  dom.driverCash = $("driverCash");
+  dom.driverRep = $("driverRep");
+  dom.driverWins = $("driverWins");
   dom.selectedClass = $("selectedClass");
   dom.selectedModel = $("selectedModel");
   dom.selectedGrade = $("selectedGrade");
@@ -2058,6 +2307,11 @@ function assignDom() {
   dom.resultLap = $("resultLap");
   dom.resultPosition = $("resultPosition");
   dom.resultScore = $("resultScore");
+  dom.resultEvent = $("resultEvent");
+  dom.resultCash = $("resultCash");
+  dom.resultRep = $("resultRep");
+  dom.resultPeak = $("resultPeak");
+  dom.resultStars = $("resultStars");
   dom.finishTitle = $("finishTitle");
 }
 
@@ -2068,6 +2322,7 @@ function init() {
   mapCtx = dom.miniMap.getContext("2d");
   buildTrack();
   populateWorld();
+  state.profile = loadProfile();
   resetRivals();
   bindInputs();
   bindMenus();
@@ -2085,9 +2340,12 @@ function init() {
     calculateGear,
     calculateGripLoad,
     calculateHeatLevel,
+    calculateDriverLevel,
+    calculateEventReward,
     calculatePerformanceIndex,
     calculatePursuitPressure,
     calculateEvadeProgress,
+    createProfile,
     calculateSlipstream,
     scoreNearMiss,
   };
@@ -2100,8 +2358,11 @@ if (typeof window !== "undefined") {
 export {
   CARS,
   DIFFICULTY,
+  EVENTS,
   CONFIG,
   PURSUIT,
+  calculateDriverLevel,
+  calculateEventReward,
   calculateEvadeProgress,
   calculateGear,
   calculateGripLoad,
@@ -2110,6 +2371,7 @@ export {
   calculatePursuitPressure,
   calculateSlipstream,
   clamp,
+  createProfile,
   formatTime,
   percentRemaining,
   scoreNearMiss,
