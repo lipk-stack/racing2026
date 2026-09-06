@@ -1,12 +1,15 @@
 {
   "name": "nightline-racer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "A self-contained browser arcade racing game.",
+  "description": "A self-contained browser 3D arcade racing game.",
   "scripts": {
     "start": "node tools/server.mjs",
     "test": "node tests/logic-test.mjs",
     "smoke": "node tests/smoke-test.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
   }
 }
