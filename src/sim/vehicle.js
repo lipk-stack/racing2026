@@ -144,7 +144,7 @@ export function createVehicleSpec(car, upgrades = {}) {
     frontWeight: sim.frontWeight,
     cgHeight: sim.cgHeight,
     wheelRadius,
-    trackWidth: car.body.width,
+    trackWidth: car.body.trackWidth,
     dragArea: sim.dragArea * mult.dragArea,
     downforce: sim.downforce * mult.downforce,
     tyreGrip: sim.tyreGrip * mult.grip,

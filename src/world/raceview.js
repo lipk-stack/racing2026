@@ -15,7 +15,7 @@ import { createEnvironment, createParticleSystem } from "./environment.js";
 export const CAMERA_MODES = ["chase", "hood", "bumper", "cinematic"];
 
 const CAMERA_RIGS = {
-  chase: { back: 6.6, height: 2.55, look: 15, fovBoost: 1 },
+  chase: { back: 7.6, height: 2.75, look: 16, fovBoost: 1 },
   hood: { back: -0.2, height: 1.28, look: 18, fovBoost: 0.86 },
   bumper: { back: -2.1, height: 0.72, look: 20, fovBoost: 0.8 },
   cinematic: { back: 11, height: 3.9, look: 16, fovBoost: 1.15 },
@@ -53,7 +53,7 @@ export function createRaceView(renderCtx, race) {
 
   const rivalModels = new Map();
   for (const rival of race.rivals) {
-    const model = createCarModel(CARS[rival.carId], { color: rival.color, simple: renderCtx.tier === "mobile" });
+    const model = createCarModel(CARS[rival.carId], { color: rival.color });
     group.add(model);
     rivalModels.set(rival.id, model);
   }
@@ -61,7 +61,7 @@ export function createRaceView(renderCtx, race) {
   const policePool = [];
   function policeModel(index) {
     while (policePool.length <= index) {
-      const model = createCarModel(CARS.fordmustang, { color: "#e9edf2", accent: "#0f1318", simple: renderCtx.tier === "mobile" });
+      const model = createCarModel(CARS.fordmustang, { color: "#e9edf2", accent: "#0f1318" });
       const bar = new THREE.Mesh(
         new THREE.BoxGeometry(1.1, 0.16, 0.3),
         new THREE.MeshStandardMaterial({ color: 0x101318, emissive: 0xff2020, emissiveIntensity: 3 }),

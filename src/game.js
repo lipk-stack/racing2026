@@ -46,6 +46,19 @@ export {
   wheelRpm,
 } from "./sim/vehicle.js";
 
+export { BODY_IDS, carBlueprint, parseTyre } from "./data/carbodies.js";
+export {
+  buildArchLiner,
+  buildBody,
+  buildGreenhouse,
+  buildPillars,
+  buildRoofPanel,
+  measure,
+  profileAt,
+  sampleCurve,
+  sectionRing,
+} from "./world/carbody.js";
+
 export { buildTrackPath } from "./sim/trackpath.js";
 export { driveAI, paceControls, planTargetSpeed, rubberBandFactor, steerToTarget } from "./sim/ai.js";
 export {

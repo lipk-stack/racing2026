@@ -63,6 +63,26 @@ The 2026-09-06 revamp rebuilds the game against the Astra bar:
 - Fully synthesised audio: per-car engine harmonics on live RPM, turbo, tyre squeal, wind, sirens.
 - Rivals that run the same physics as the player, so overtakes and comebacks are earned.
 
+## Car Modelling Response (2026-09-06)
+
+The first 3D pass swept one superellipse section along each car, so every body came out as the same
+rounded slab. The replacement is a real surfacing pipeline driven by published data:
+
+- Blueprints carry each car's real length, width, height, wheelbase, track and staggered tyre codes,
+  sourced per car, plus authored silhouette landmarks.
+- Sections are built from named control points with doubled crease points, a hood valley, closing
+  bumpers and wheel arches cut as the upper half of a circle on each axle.
+- The greenhouse is split into glazing, painted roof and painted pillars, which is what stops a
+  cabin disappearing into a dark body at night.
+- Light signatures, wheels, apertures and aero are authored per car.
+- Accuracy is asserted rather than asserted-to: `npm test` measures every body against its published
+  dimensions (within 30 mm on each axis, exact wheelbase) and checks the arches clear their wheels.
+
+Reference gathering was textual - the egress policy blocks image hosts - so proportions and design
+cues come from published specification data, not from photographs. That is the honest ceiling here:
+stance, proportion, silhouette and signature are right; a close-range photo match would need
+licensed CAD.
+
 ## Next Standards Gap
 
 - Livery and paint customisation, including wraps and rim colour, saved per car.

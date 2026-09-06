@@ -10,6 +10,8 @@
  * career reward math, the performance index and the published test contract all read them.
  */
 
+import { carBlueprint } from "./carbodies.js";
+
 const GEARBOX = {
   dct7: { ratios: [3.91, 2.29, 1.58, 1.19, 0.97, 0.81, 0.67], final: 3.44, shiftTime: 0.09 },
   dct8: { ratios: [4.71, 2.84, 1.91, 1.43, 1.16, 0.95, 0.79, 0.65], final: 3.31, shiftTime: 0.08 },
@@ -355,6 +357,25 @@ export const CARS = {
     body: { length: 4.55, width: 1.9, height: 1.3, wheelRadius: 0.36, spoiler: "wing" },
   },
 };
+
+/**
+ * Stamp each car with its roster key, and take its physical dimensions from the body blueprint so
+ * the published figures live in exactly one place: the blueprint is what the model is built from,
+ * so it is also what the physics should measure.
+ */
+for (const [id, car] of Object.entries(CARS)) {
+  car.id = id;
+  const blueprint = carBlueprint(id);
+  car.body = {
+    ...car.body,
+    length: blueprint.length,
+    width: blueprint.width,
+    height: blueprint.height,
+    wheelRadius: blueprint.tyre.rear.radius,
+    trackWidth: blueprint.track[1],
+  };
+  car.sim.wheelbase = blueprint.wheelbase;
+}
 
 export const STARTER_CAR = "toyotasupra";
 

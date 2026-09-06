@@ -71,6 +71,8 @@ export function createShowroom(renderCtx) {
   let model = null;
   let currentCarId = null;
   let angle = 0.6;
+  // A locked pose freezes the orbit so a screenshot can be taken from a repeatable angle.
+  let locked = null;
 
   function setCar(car, options = {}) {
     if (model) {
@@ -95,8 +97,31 @@ export function createShowroom(renderCtx) {
       return currentCarId;
     },
     setCar,
+    /**
+     * Freeze the turntable and camera at a repeatable angle, or pass null to resume the orbit.
+     * Used by `tools/car-contact-sheet.mjs` so every car is photographed identically.
+     */
+    setPose(pose) {
+      locked = pose;
+    },
     /** Slow orbit plus a gentle camera drift, so the menu is never a still image. */
     update(dt, time) {
+      if (locked) {
+        turntable.rotation.y = locked.turntable ?? 0;
+        const camera = renderCtx.camera;
+        const radius = locked.radius ?? 8;
+        const elevation = locked.elevation ?? 0.28;
+        camera.position.set(
+          Math.cos(locked.azimuth ?? 0) * radius,
+          Math.sin(elevation) * radius,
+          Math.sin(locked.azimuth ?? 0) * radius,
+        );
+        camera.fov = locked.fov ?? 38;
+        camera.lookAt(0, locked.target ?? 0.7, 0);
+        camera.updateProjectionMatrix();
+        if (model) updateCarModel(model, { speed: 0, steer: 0, brake: 0, nitro: 0, dt });
+        return;
+      }
       angle += dt * 0.16;
       turntable.rotation.y = angle;
       if (model) {

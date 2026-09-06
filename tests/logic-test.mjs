@@ -7,6 +7,7 @@
  */
 
 import {
+  BODY_IDS,
   CARS,
   CAR_IDS,
   EVENTS,
@@ -20,7 +21,16 @@ import {
   applyEventReward,
   approximateLapLength,
   autoGear,
+  buildArchLiner,
+  buildBody,
+  buildGreenhouse,
+  buildPillars,
+  buildRoofPanel,
   buildTrackPath,
+  carBlueprint,
+  measure,
+  parseTyre,
+  profileAt,
   buyCar,
   buyUpgrade,
   calculateDriverLevel,
@@ -51,8 +61,10 @@ import {
   percentRemaining,
   planTargetSpeed,
   requiredUnits,
+  sampleCurve,
   saveProfile,
   scoreDrift,
+  sectionRing,
   scoreNearMiss,
   snapshot,
   steerLimit,
@@ -193,6 +205,77 @@ assert("steering corrects toward the line", steerToTarget(createVehicleState({ s
   assert("AI laps at a competitive pace", time > 40 && time < 110);
   assert("AI mostly stays off the barriers", wallFrames < 60);
 }
+
+/* ------------------------------------------------------- car bodies ------ */
+section("car bodies");
+assert("every car has a body blueprint", CAR_IDS.every((id) => BODY_IDS.includes(id)));
+assert("tyre codes parse", parseTyre("315/30R21").width === 0.315 && parseTyre("315/30R21").rim > 0.53);
+assert("tyre radius is a real rolling radius", Math.abs(parseTyre("255/35R19").radius - 0.3306) < 0.001);
+assert("an unreadable tyre code is rejected", (() => {
+  try {
+    parseTyre("nonsense");
+    return false;
+  } catch {
+    return true;
+  }
+})());
+
+for (const id of BODY_IDS) {
+  const blueprint = carBlueprint(id);
+  const car = CARS[id];
+  const body = buildBody(blueprint);
+  const glass = buildGreenhouse(blueprint);
+  const roof = buildRoofPanel(blueprint);
+  const pillars = buildPillars(blueprint);
+  const shell = measure(body);
+  const cabin = measure(glass);
+  const height = Math.max(shell.max[1], cabin.max[1], measure(roof).max[1], measure(pillars).max[1]);
+
+  // The measurable half of "looks like the real car": the mesh is the size the real car is.
+  assert(`${id} is the published length`, Math.abs(shell.size[2] - blueprint.length) < 0.03);
+  assert(`${id} is the published width`, Math.abs(shell.size[0] - blueprint.width) < 0.03);
+  assert(`${id} is the published height`, Math.abs(height - blueprint.height) < 0.03);
+  assert(`${id} has the published wheelbase`, Math.abs(blueprint.rearAxle - blueprint.frontAxle - blueprint.wheelbase) < 1e-9);
+  assert(`${id} agrees with the physics wheelbase`, Math.abs(blueprint.wheelbase - car.sim.wheelbase) < 1e-9);
+  assert(`${id} agrees with the roster dimensions`, Math.abs(car.body.length - blueprint.length) < 1e-9 && Math.abs(car.body.width - blueprint.width) < 1e-9);
+  assert(`${id} rolls on its published tyres`, Math.abs(car.body.wheelRadius - blueprint.tyre.rear.radius) < 1e-9);
+
+  // Stance.
+  assert(`${id} tracks narrower than its body`, blueprint.track[0] < blueprint.width && blueprint.track[1] < blueprint.width);
+  assert(`${id} runs staggered or square tyres`, blueprint.tyre.rear.width >= blueprint.tyre.front.width);
+  assert(`${id} keeps both axles inside the body`, blueprint.frontAxle > -blueprint.length / 2 && blueprint.rearAxle < blueprint.length / 2);
+  assert(`${id} sits on the ground`, Math.abs(shell.min[1] - blueprint.ride) < 0.2 && shell.min[1] > 0);
+
+  // Arches have to clear the wheels they are cut for, or the tyre pokes through the bodywork.
+  for (const [axle, tyre] of [[blueprint.frontAxle, blueprint.tyre.front], [blueprint.rearAxle, blueprint.tyre.rear]]) {
+    const ring = sectionRing(blueprint, (axle + blueprint.length / 2) / blueprint.length);
+    const outer = ring.ring.filter(([x]) => Math.abs(x) > blueprint.track[0] / 2 - tyre.width * 0.6);
+    const lowest = Math.min(...outer.map(([, y]) => y));
+    assert(`${id} arch clears its wheel`, lowest > tyre.radius * 1.6);
+  }
+
+  // The cabin is a cabin: above the beltline, below the roof, and actually built.
+  const roofMid = (blueprint.roof[0][0] + blueprint.roof[blueprint.roof.length - 1][0]) / 2;
+  const belt = sampleCurve(blueprint.deck, roofMid);
+  assert(`${id} has a glasshouse above the beltline`, cabin.max[1] > belt + 0.15);
+  assert(`${id} has a beltline below the roof`, belt < blueprint.height * 0.78);
+  assert(`${id} builds glass, roof and pillars`, glass.triangles > 0 && roof.triangles > 0 && pillars.triangles > 0);
+
+  // Geometry hygiene and budget.
+  const total = body.triangles + glass.triangles + roof.triangles + pillars.triangles;
+  assert(`${id} geometry is finite`, shell.finite && cabin.finite);
+  assert(`${id} indexes inside its vertex buffer`, body.indices.every((index) => index < body.positions.length / 3));
+  assert(`${id} stays inside the shell budget`, total < 9000);
+  assert(`${id} liners cover both arches`, buildArchLiner(blueprint, "front").triangles > 0 && buildArchLiner(blueprint, "rear").triangles > 0);
+}
+
+assert("profiles read the body at a station", profileAt(carBlueprint("porsche911turbo"), 0.5).halfWidth > 0.7);
+assert("curve sampling clamps outside its range", sampleCurve([[0.2, 1], [0.8, 2]], 0) === 1 && sampleCurve([[0.2, 1], [0.8, 2]], 1) === 2);
+assert("bodies differ between cars", (() => {
+  const a = measure(buildBody(carBlueprint("porsche911turbo")));
+  const b = measure(buildBody(carBlueprint("fordmustang")));
+  return Math.abs(a.size[2] - b.size[2]) > 0.2;
+})());
 
 /* --------------------------------------------------------- pursuit ------- */
 section("pursuit");

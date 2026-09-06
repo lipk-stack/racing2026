@@ -538,6 +538,23 @@ function exposeDebugSurface() {
     get tracks() {
       return TRACKS;
     },
+    get showroom() {
+      return showroom;
+    },
+    cars: CARS,
+    /** Triangle and mesh count of whatever the showroom is currently displaying. */
+    modelStats() {
+      let triangles = 0;
+      let meshes = 0;
+      renderCtx.scene.traverse((child) => {
+        if (!child.isMesh || !child.geometry) return;
+        meshes += 1;
+        const index = child.geometry.getIndex();
+        const position = child.geometry.getAttribute("position");
+        triangles += index ? index.count / 3 : (position ? position.count / 3 : 0);
+      });
+      return { triangles: Math.round(triangles), meshes };
+    },
     startRace,
     quitToGarage,
     selectCar,

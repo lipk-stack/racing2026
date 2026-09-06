@@ -67,9 +67,35 @@ the sky doubles as the environment map, so car paint reflects the same city the 
 through. Lane markings are built as geometry rather than painted into the road texture - at the
 grazing angles a racing camera looks from, painted lines disappear into the mip chain.
 
-`world/carmodel.js` lofts every car from its own dimensions and body profile: a lower body shell, a
-glass cabin, roof panel, wheels with brake discs that glow under braking, lights, a spoiler and an
-underglow plane. The same model is used in the race, in the showroom and for the police.
+## Cars
+
+Cars are built in three layers, and the split is what makes them checkable:
+
+- `src/data/carbodies.js` is the **blueprint**: published length, width, height, wheelbase and tyre
+  codes, plus the landmarks that identify a silhouette - where the cowl sits, where the roof peaks,
+  how fast the backlight falls, where the body is widest, which light signature the car wears.
+- `src/world/carbody.js` is the **surfacing engine**, and it imports nothing. Each station along the
+  car is a closed section built from named control points - floor, rocker, hip, widest point,
+  shoulder crease, deck - with the crease points doubled so they stay creases rather than melting
+  into a curve. The top of each section comes from the authored side profile, the hood and engine
+  cover sink into a valley below the fender tops, the ends close down into rounded bumpers, and the
+  wheel arches are cut as the upper half of a circle centred on each axle so the body wraps over the
+  wheel the way a real arch does. The greenhouse is lofted separately and split into glazing, a
+  painted roof panel and painted A/C pillars, because a cabin rendered as one dark shell disappears
+  at night. It returns plain typed arrays.
+- `src/world/carparts.js` and `src/world/carmodel.js` add the details and the materials: light
+  glyphs extruded per car (four-point rings, a hexagonal Y, a full-width bar, four round tails),
+  wheels on the car's own staggered tyres with its own spoke pattern and caliper colour, bumper
+  apertures, side intakes, splitter, diffuser, wing, exhausts, mirrors, shutlines and a cabin
+  interior so the glass has something behind it.
+
+Geometry is cached per car, so a field of rivals costs one build each and shares the buffers; only
+materials are cloned for a rival's colour. Because the surfacing engine is dependency-free,
+`npm test` builds all twelve bodies in plain Node and measures them against the published
+dimensions - every car is within 30 mm on length, width and height, and its wheelbase is exact.
+
+`tools/car-contact-sheet.mjs` renders the roster from three fixed angles into `output/cars/` for
+review; that loop is what catches a silhouette that a spec sheet cannot.
 
 ## Interface
 

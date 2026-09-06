@@ -53,6 +53,14 @@ gauntlet, elimination and a boss race, unlocking as the driver levels up.
 rendered live on the showroom turntable. Cash and REP buy cars and eight upgrade parts - engine,
 turbo, tyres, gearbox, aero, brakes, weight and nitrous - and every part feeds the physics directly.
 
+**Cars built to their published dimensions.** Every body is generated from a blueprint of the real
+car: length, width, height, wheelbase and staggered tyre sizes as published, plus the landmarks that
+make a silhouette recognisable - cowl and roof positions, the hood valley, the shoulder crease, the
+hips over the rear arches - and the car's own light signature, wheels and aero. `npm test` measures
+all twelve meshes against those figures; each is within 30 mm on every axis with an exact wheelbase.
+Run `node tools/car-contact-sheet.mjs` to render the roster from three fixed angles into
+`output/cars/`.
+
 **Police.** Heat rises from nitrous signatures, near misses, contact and leading the pack; chase
 units hunt the player's line, roadblocks drop ahead, and a clean gap banks an evasion bonus.
 

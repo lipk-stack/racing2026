@@ -113,7 +113,7 @@ export function createRenderer(canvas, options = {}) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(62, 1, 0.4, 4200);
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.7, 4200);
   camera.position.set(0, 6, -12);
 
   const composer = new EffectComposer(renderer);
