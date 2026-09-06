@@ -2,135 +2,191 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="Nightline Racer is a self-contained arcade racing game built with Canvas."
+      content="Nightline Racer is a self-contained 3D arcade racing game built with WebGL."
     />
     <title>Nightline Racer</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070b10'/%3E%3Cpath d='M6 22a10 10 0 1 1 20 0' fill='none' stroke='%2300d8ff' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 21 22 12' stroke='%23ffd166' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./src/vendor/three/build/three.module.min.js",
+          "three/addons/": "./src/vendor/three/addons/"
+        }
+      }
+    </script>
   </head>
   <body>
     <main class="game-shell" aria-label="Nightline Racer">
       <canvas id="gameCanvas" aria-label="Racing viewport"></canvas>
 
-      <section id="startPanel" class="overlay panel is-visible" aria-label="Race setup">
-        <div class="brand-lockup">
-          <p class="eyebrow">Urban arcade racing</p>
-          <h1>Nightline Racer</h1>
-        </div>
+      <div id="bootPanel" class="boot" role="status">
+        <span class="boot-mark">NIGHTLINE</span>
+        <span class="boot-bar"><i id="bootFill"></i></span>
+        <small id="bootLabel">Building the city</small>
+      </div>
 
-        <div class="career-strip" aria-label="Driver career">
-          <div>
-            <span>LEVEL</span>
-            <strong id="driverLevel">1</strong>
+      <!-- ------------------------------------------------------------------ -->
+      <!-- Garage / career shell                                               -->
+      <!-- ------------------------------------------------------------------ -->
+      <section id="menuPanel" class="overlay menu" aria-label="Garage">
+        <header class="menu-head">
+          <div class="brand-lockup">
+            <p class="eyebrow">Nightline · 2026 season</p>
+            <h1>Nightline Racer</h1>
           </div>
-          <div>
-            <span>BANK</span>
-            <strong id="driverCash">$25,000</strong>
+          <div class="career-strip" aria-label="Driver career">
+            <div><span>LEVEL</span><strong id="driverLevel">1</strong></div>
+            <div><span>BANK</span><strong id="driverCash">$25,000</strong></div>
+            <div><span>REP</span><strong id="driverRep">0</strong></div>
+            <div><span>WINS</span><strong id="driverWins">0</strong></div>
+            <div><span>GARAGE</span><strong id="driverGarage">$0</strong></div>
           </div>
-          <div>
-            <span>REP</span>
-            <strong id="driverRep">0</strong>
-          </div>
-          <div>
-            <span>WINS</span>
-            <strong id="driverWins">0</strong>
-          </div>
-        </div>
+        </header>
 
-        <div id="garageGrid" class="garage-grid" aria-label="Car selection">
-        </div>
+        <nav class="tab-bar" role="tablist" aria-label="Garage sections">
+          <button class="tab is-active" data-tab="garage" role="tab" type="button">Garage</button>
+          <button class="tab" data-tab="tuning" role="tab" type="button">Tuning</button>
+          <button class="tab" data-tab="events" role="tab" type="button">Contracts</button>
+        </nav>
 
-        <div class="garage-spec" aria-label="Selected car specifications">
-          <div>
-            <span id="selectedClass">S+</span>
-            <strong id="selectedModel">Porsche 911 Turbo S</strong>
-            <small id="selectedGrade">992.2 T-Hybrid</small>
-          </div>
-          <dl>
-            <div>
-              <dt>Power</dt>
-              <dd id="selectedPower">701 hp</dd>
+        <div class="menu-body">
+          <!-- Garage -->
+          <section class="tab-panel is-active" data-panel="garage">
+            <div id="garageGrid" class="garage-grid" aria-label="Car selection"></div>
+          </section>
+
+          <!-- Tuning -->
+          <section class="tab-panel" data-panel="tuning">
+            <div id="upgradeGrid" class="upgrade-grid" aria-label="Upgrade parts"></div>
+          </section>
+
+          <!-- Contracts -->
+          <section class="tab-panel" data-panel="events">
+            <div id="eventGrid" class="event-grid" aria-label="Event playlist"></div>
+          </section>
+
+          <div class="showroom-window" aria-hidden="true"></div>
+
+          <aside class="spec-rail" aria-label="Selected car">
+            <div class="spec-head">
+              <span id="selectedClass">B 812</span>
+              <strong id="selectedModel">Toyota GR Supra</strong>
+              <small id="selectedGrade">A90 3.0 Final Edition</small>
             </div>
-            <div>
-              <dt>0-100</dt>
-              <dd id="selectedLaunch">2.5s</dd>
+            <dl class="spec-sheet">
+              <div><dt>Power</dt><dd id="selectedPower">382 hp</dd></div>
+              <div><dt>0-100</dt><dd id="selectedLaunch">4.1s</dd></div>
+              <div><dt>Top</dt><dd id="selectedTopSpeed">250 km/h</dd></div>
+              <div><dt>Drive</dt><dd id="selectedDrive">RWD</dd></div>
+              <div><dt>Weight</dt><dd id="selectedWeight">1520 kg</dd></div>
+              <div><dt>Engine</dt><dd id="selectedEngine">Inline-six</dd></div>
+            </dl>
+            <div class="build-meter" aria-label="Build progress">
+              <span>BUILD</span>
+              <i><b id="buildFill"></b></i>
+              <strong id="buildValue">0%</strong>
             </div>
-            <div>
-              <dt>Top</dt>
-              <dd id="selectedTopSpeed">322 km/h</dd>
+            <div id="carAction" class="car-action"></div>
+
+            <div class="control-row" role="group" aria-label="Race difficulty">
+              <button class="pill" data-difficulty="cruise" type="button">Cruise</button>
+              <button class="pill is-active" data-difficulty="street" type="button">Street</button>
+              <button class="pill" data-difficulty="pro" type="button">Pro</button>
             </div>
-            <div>
-              <dt>Drive</dt>
-              <dd id="selectedDrive">AWD</dd>
+            <p id="eventSummary" class="event-summary">Apex Circuit · Nightline Bay · 3 laps</p>
+            <div class="menu-actions">
+              <button id="startRace" class="primary-action" type="button">Start event</button>
+              <button id="timeTrial" class="secondary-action" type="button">Time trial</button>
             </div>
-          </dl>
-        </div>
-
-        <div id="eventGrid" class="event-grid" aria-label="Event playlist">
-        </div>
-
-        <div class="control-row" role="group" aria-label="Race difficulty">
-          <button class="pill is-active" data-difficulty="cruise" type="button">Cruise</button>
-          <button class="pill" data-difficulty="street" type="button">Street</button>
-          <button class="pill" data-difficulty="pro" type="button">Pro</button>
-        </div>
-
-        <div class="menu-actions">
-          <button id="startRace" class="primary-action" type="button">Start event</button>
-          <button id="timeTrial" class="secondary-action" type="button">Time trial</button>
+          </aside>
         </div>
       </section>
 
+      <!-- ------------------------------------------------------------------ -->
+      <!-- In-race HUD                                                         -->
+      <!-- ------------------------------------------------------------------ -->
+      <section class="hud" aria-label="Race dashboard">
+        <div class="hud-top">
+          <div class="hud-module position"><span>POS</span><strong id="positionValue">1</strong></div>
+          <div class="hud-module lap"><span>LAP</span><strong id="lapValue">1/3</strong></div>
+          <div class="hud-module time"><span>TIME</span><strong id="timeValue">0:00.000</strong></div>
+          <div class="hud-module best"><span>BEST</span><strong id="bestValue">--</strong></div>
+          <div class="hud-module delta"><span>SECTOR</span><strong id="deltaValue">--</strong></div>
+          <div class="hud-module score"><span>STYLE</span><strong id="scoreValue">0</strong></div>
+          <div class="hud-module combo"><span>COMBO</span><strong id="comboValue">x1.0</strong></div>
+          <div class="hud-module heat"><span>HEAT</span><strong id="heatValue">0</strong></div>
+          <div class="hud-module pursuit"><span>EVADE</span><strong id="evadeValue">CLEAR</strong></div>
+        </div>
+
+        <div class="telemetry-strip" aria-label="Race telemetry">
+          <div><span>GEAR</span><strong id="gearValue">N</strong></div>
+          <div><span>GRIP</span><strong id="gripValue">100%</strong><i id="gripFill"></i></div>
+          <div><span>APEX</span><strong id="apexValue">OPEN</strong></div>
+          <div><span>DRIFT</span><strong id="driftValue">0</strong></div>
+        </div>
+
+        <div id="objectiveBar" class="objective-bar" hidden>
+          <span id="objectiveLabel">GATE</span>
+          <strong id="objectiveValue">0.0</strong>
+        </div>
+
+        <div class="hud-bottom">
+          <div class="speed-cluster" aria-label="Speedometer">
+            <canvas id="speedCanvas" width="240" height="240"></canvas>
+            <div class="speed-readout">
+              <strong id="speedValue">0</strong>
+              <span>km/h</span>
+            </div>
+          </div>
+          <div class="race-stack">
+            <div class="boost-meter"><span>NITRO</span><i id="boostFill"></i></div>
+            <div class="slipstream-meter"><span>DRAFT</span><i id="slipstreamFill"></i></div>
+            <canvas id="miniMap" width="200" height="200" aria-label="Race minimap"></canvas>
+          </div>
+        </div>
+
+        <div id="directorFeed" class="director-feed" aria-live="polite"></div>
+      </section>
+
+      <div id="countdown" class="countdown" aria-hidden="true">3</div>
+
+      <!-- ------------------------------------------------------------------ -->
+      <!-- Pause and results                                                   -->
+      <!-- ------------------------------------------------------------------ -->
       <section id="pausePanel" class="overlay panel pause-panel" aria-label="Pause menu">
-        <h2>Race paused</h2>
+        <p class="eyebrow">Paused</p>
+        <h2 id="pauseTitle">Apex Circuit</h2>
+        <div class="pause-grid">
+          <button class="chip" data-setting="camera" type="button">Camera: Chase</button>
+          <button class="chip is-on" data-setting="assist" type="button">Assists: On</button>
+          <button class="chip is-on" data-setting="audio" type="button">Audio: On</button>
+          <button class="chip" data-setting="quality" type="button">Quality: High</button>
+        </div>
         <div class="menu-actions">
           <button id="resumeRace" class="primary-action" type="button">Resume</button>
           <button id="restartRace" class="secondary-action" type="button">Restart</button>
+          <button id="quitRace" class="secondary-action" type="button">Garage</button>
         </div>
       </section>
 
       <section id="finishPanel" class="overlay panel finish-panel" aria-label="Race results">
         <p class="eyebrow">Race complete</p>
         <h2 id="finishTitle">Podium finish</h2>
+        <div id="finishStars" class="finish-stars">☆☆☆</div>
         <dl class="results-grid">
-          <div>
-            <dt>Time</dt>
-            <dd id="resultTime">0:00.000</dd>
-          </div>
-          <div>
-            <dt>Best lap</dt>
-            <dd id="resultLap">0:00.000</dd>
-          </div>
-          <div>
-            <dt>Position</dt>
-            <dd id="resultPosition">1/6</dd>
-          </div>
-          <div>
-            <dt>Style</dt>
-            <dd id="resultScore">0</dd>
-          </div>
-          <div>
-            <dt>Event</dt>
-            <dd id="resultEvent">Apex Circuit</dd>
-          </div>
-          <div>
-            <dt>Cash</dt>
-            <dd id="resultCash">$0</dd>
-          </div>
-          <div>
-            <dt>REP</dt>
-            <dd id="resultRep">0</dd>
-          </div>
-          <div>
-            <dt>Peak</dt>
-            <dd id="resultPeak">0 km/h</dd>
-          </div>
-          <div>
-            <dt>Rating</dt>
-            <dd id="resultStars">☆☆☆</dd>
-          </div>
+          <div><dt>Time</dt><dd id="resultTime">0:00.000</dd></div>
+          <div><dt>Best lap</dt><dd id="resultLap">0:00.000</dd></div>
+          <div><dt>Position</dt><dd id="resultPosition">1/6</dd></div>
+          <div><dt>Style</dt><dd id="resultScore">0</dd></div>
+          <div><dt>Event</dt><dd id="resultEvent">Apex Circuit</dd></div>
+          <div><dt>Cash</dt><dd id="resultCash">$0</dd></div>
+          <div><dt>REP</dt><dd id="resultRep">0</dd></div>
+          <div><dt>Peak</dt><dd id="resultPeak">0 km/h</dd></div>
+          <div><dt>Rating</dt><dd id="resultStars">☆☆☆</dd></div>
         </dl>
         <div class="menu-actions">
           <button id="nextRace" class="primary-action" type="button">Race again</button>
@@ -138,87 +194,11 @@
         </div>
       </section>
 
-      <section class="hud" aria-label="Race dashboard">
-        <div class="hud-top">
-          <div class="hud-module position">
-            <span>POS</span>
-            <strong id="positionValue">6</strong>
-          </div>
-          <div class="hud-module lap">
-            <span>LAP</span>
-            <strong id="lapValue">1/3</strong>
-          </div>
-          <div class="hud-module time">
-            <span>TIME</span>
-            <strong id="timeValue">0:00.000</strong>
-          </div>
-          <div class="hud-module best">
-            <span>BEST</span>
-            <strong id="bestValue">--</strong>
-          </div>
-          <div class="hud-module score">
-            <span>STYLE</span>
-            <strong id="scoreValue">0</strong>
-          </div>
-          <div class="hud-module combo">
-            <span>COMBO</span>
-            <strong id="comboValue">x1.0</strong>
-          </div>
-          <div class="hud-module heat">
-            <span>HEAT</span>
-            <strong id="heatValue">0</strong>
-          </div>
-          <div class="hud-module pursuit">
-            <span>EVADE</span>
-            <strong id="evadeValue">CLEAR</strong>
-          </div>
-        </div>
-
-        <div class="telemetry-strip" aria-label="Race telemetry">
-          <div>
-            <span>GEAR</span>
-            <strong id="gearValue">N</strong>
-          </div>
-          <div>
-            <span>GRIP</span>
-            <strong id="gripValue">100%</strong>
-            <i id="gripFill"></i>
-          </div>
-          <div>
-            <span>APEX</span>
-            <strong id="apexValue">OPEN</strong>
-          </div>
-        </div>
-
-        <div class="hud-bottom">
-          <div class="speed-cluster" aria-label="Speedometer">
-            <canvas id="speedCanvas" width="220" height="220"></canvas>
-            <div class="speed-readout">
-              <strong id="speedValue">0</strong>
-              <span>km/h</span>
-            </div>
-          </div>
-          <div class="race-stack">
-            <div class="boost-meter">
-              <span>NITRO</span>
-              <i id="boostFill"></i>
-            </div>
-            <div class="slipstream-meter">
-              <span>DRAFT</span>
-              <i id="slipstreamFill"></i>
-            </div>
-            <canvas id="miniMap" width="180" height="240" aria-label="Race minimap"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <div id="countdown" class="countdown" aria-hidden="true">3</div>
-
       <aside class="quick-settings" aria-label="Game settings">
-        <button id="cameraToggle" class="icon-button" type="button" title="Camera">CAM</button>
-        <button id="weatherToggle" class="icon-button is-on" type="button" title="Weather">WX</button>
-        <button id="assistToggle" class="icon-button is-on" type="button" title="Assist">ABS</button>
-        <button id="muteToggle" class="icon-button" type="button" title="Audio">AUD</button>
+        <button id="cameraToggle" class="icon-button" type="button" title="Camera (C)">CAM</button>
+        <button id="assistToggle" class="icon-button is-on" type="button" title="Assists">ABS</button>
+        <button id="muteToggle" class="icon-button is-on" type="button" title="Audio (M)">AUD</button>
+        <button id="photoToggle" class="icon-button" type="button" title="Photo mode (H)">PHO</button>
       </aside>
 
       <nav class="touch-pad" aria-label="Touch driving controls">
@@ -226,14 +206,18 @@
         <button data-control="brake" type="button">Brake</button>
         <button data-control="throttle" type="button">Gas</button>
         <button data-control="right" type="button">Right</button>
-        <button data-control="boost" type="button">Boost</button>
+        <button data-control="nitro" type="button">Nitro</button>
+        <button data-control="handbrake" type="button">Hand</button>
       </nav>
 
-      <div id="statusLine" class="status-line" role="status" aria-live="polite">
-        Ready
+      <div id="statusLine" class="status-line" role="status" aria-live="polite">Ready</div>
+
+      <div id="fallbackPanel" class="overlay fallback" hidden>
+        <h2>WebGL 2 required</h2>
+        <p id="fallbackReason">Nightline Racer needs a browser with WebGL 2 and hardware acceleration enabled.</p>
       </div>
     </main>
 
-    <script type="module" src="./src/game.js"></script>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

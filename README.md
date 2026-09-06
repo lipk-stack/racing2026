@@ -1,19 +1,20 @@
 # Racing 2026
 
-Racing 2026 is the canonical repository for the Daily Classic Game automation. Future automation runs should use this checkout instead of the older local `daily-classic-game` prototype.
+Racing 2026 is the canonical repository for the Daily Classic Game automation. It holds **Nightline
+Racer**, a self-contained 3D arcade racing game that runs in the browser with no network calls, no
+paid APIs and no build step.
 
 ## Automation Contract
 
 Every automation iteration should:
 
 - Read `docs/automation-ledger.md` before planning new work.
-- Add a new dated entry to `docs/automation-ledger.md` describing what changed, what was verified, and what should be considered next.
+- Add a new dated entry to `docs/automation-ledger.md` describing what changed, what was verified,
+  and what should be considered next.
 - Keep source, tests, documentation, and the ledger in this repository.
 - Prefer substantial game-quality improvements over isolated cosmetic tweaks.
 
 ## Play
-
-Open `index.html` in a browser, or run the local static server:
 
 ```powershell
 npm start
@@ -21,41 +22,65 @@ npm start
 
 Then open `http://127.0.0.1:4177`.
 
+The game is an ES module and uses an import map, so it needs to be served over HTTP - opening
+`index.html` straight off the filesystem will not work.
+
 ## Controls
 
-- Arrow keys or WASD: steer, throttle, and brake
-- Space or Shift: nitro
-- P or Escape: pause
-- R: restart
-- C: camera
+- Arrow keys or WASD: steer, throttle, brake
+- Space or Shift: nitrous
+- X or Ctrl: handbrake
+- C: camera (chase, hood, bumper, cinematic)
+- P or Escape: pause · R: restart · M: mute · H: photo mode
+- A gamepad works if one is connected; touch controls appear automatically on small screens.
 
-Touch controls appear automatically on small screens.
+## The game
 
-## Current Features
+**Drive.** A single-track vehicle model solved in track-relative coordinates: a Pacejka-style tyre
+curve, longitudinal load transfer, a torque curve through real gear ratios, traction-circle limited
+drive, downforce, per-surface grip, handbrake and barrier impulses. Each car's final drive is solved
+from its published top speed, so it reaches its spec-sheet number at the limiter in top gear.
 
-- Pseudo-3D racing road with hills, curves, rumble strips, lane markers, fog, and skyline scenery
-- Prestige sports-car garage with real model/trim references across Porsche, Ferrari, Lamborghini, McLaren, Mercedes-AMG, Audi, BMW, and Nissan
-- Per-car class, horsepower, 0-100 km/h, top-speed, drivetrain, engine, weight, grip, boost, and handling data
-- Career hub with bank, REP, driver level, wins, per-event records, and per-car mastery
-- Event contracts for circuit, sprint, time attack, speed trap, and heat escape race formats
-- Cruise, Street, and Pro difficulty modes
-- Cinematic countdown launch, AI rivals, collision response, off-road grip loss, camera shake, sparks, and boost trails
-- Slipstream drafting, near-miss style scoring, combo multiplier, race director callouts, and opponent proximity arrows
-- NFS-style police pursuit layer with heat levels, chase cars, roadblocks, evasion bonuses, siren lighting, and pursuit pressure feedback
-- Dynamic night sky, weather toggle, city lighting, motion particles, minimap, speedometer, lap timer, and race results
-- Wet-road sheen, headlight cone, speed-line effects, nitro bloom, curve chevrons, gantries, and responsive racecraft HUD meters
-- Higher-detail car silhouettes with distinct wedge, longtail, longnose, widebody, coupe, and GT body profiles
-- Assistive projected racing line plus live gear, grip, and upcoming-apex telemetry for better corner setup
-- Responsive HUD with desktop cockpit controls and mobile touch controls
-- No network dependency and no paid APIs
+**Four circuits.** Nightline Bay (wet harbour night), Ridge Pass (storm-lashed mountain switchbacks),
+Downtown Grid (tight city blocks and sirens) and Coast Sunset (fast cliffside sweepers). Each is
+lofted from an authored spline into road, kerbs, run-off, barriers, gantries and scenery, with its
+own palette, weather and lighting.
 
-See `docs/aaa-racing-research.md` for the current benchmark notes guiding the path toward AAA-style racing standards.
+**Nine contracts.** Circuit, sprint, time attack, speed trap, heat escape, drift zone, checkpoint
+gauntlet, elimination and a boss race, unlocking as the driver levels up.
+
+**A garage that spends.** Twelve real-model cars from an attainable GR Supra to a 911 Turbo S, each
+rendered live on the showroom turntable. Cash and REP buy cars and eight upgrade parts - engine,
+turbo, tyres, gearbox, aero, brakes, weight and nitrous - and every part feeds the physics directly.
+
+**Cars built to their published dimensions.** Every body is generated from a blueprint of the real
+car: length, width, height, wheelbase and staggered tyre sizes as published, plus the landmarks that
+make a silhouette recognisable - cowl and roof positions, the hood valley, the shoulder crease, the
+hips over the rear arches - and the car's own light signature, wheels and aero. `npm test` measures
+all twelve meshes against those figures; each is within 30 mm on every axis with an exact wheelbase.
+Run `node tools/car-contact-sheet.mjs` to render the roster from three fixed angles into
+`output/cars/`.
+
+**Police.** Heat rises from nitrous signatures, near misses, contact and leading the pack; chase
+units hunt the player's line, roadblocks drop ahead, and a clean gap banks an evasion bonus.
+
+**Presentation.** WebGL2 with filmic tone mapping, soft shadows, bloom, speed blur and SMAA over
+four quality tiers that step down at runtime rather than stutter. Procedurally synthesised audio -
+per-car engine harmonics tied to live RPM, turbo, tyre squeal, wind, sirens and impacts. Rev
+counter, minimap, sector deltas, race-director feed and a photo mode.
 
 ## Verification
 
 ```powershell
+npm install
 npm test
 npm run smoke
 ```
 
-`npm test` checks pure game utilities. `npm run smoke` starts the local server, opens the game in a headless browser, takes desktop and mobile screenshots, verifies the canvas is nonblank, drives the car, and confirms mobile controls appear.
+`npm test` covers the pure simulation, track, economy and race logic in Node (145 assertions).
+`npm run smoke` drives the real game in a real browser: it proves the WebGL2 scene renders, works
+the garage economy, drives with the keyboard, visits every circuit, finishes a race, and writes
+screenshots to `output/playwright`.
+
+See `docs/architecture.md` for how the modules fit together and `docs/aaa-racing-research.md` for
+the benchmarks guiding the work.

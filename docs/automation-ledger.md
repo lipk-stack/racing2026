@@ -15,6 +15,108 @@ This file is the repo-local memory for the Daily Classic Game automation. Read i
 
 ## Iteration History
 
+### 2026-09-06 - Realistic Car Models
+
+Objective: Replace the placeholder car shapes with bodies modelled on the real cars, referenced from
+published data, and make the accuracy checkable rather than a matter of opinion.
+
+Completed:
+
+- Added `src/data/carbodies.js`: a blueprint per car carrying the published length, width, height,
+  wheelbase, track and staggered tyre codes (255/35R19 through 315/30R21), plus the silhouette
+  landmarks that identify a car - cowl, roof apex, backlight fall, plan-view hips - and its light
+  signature, wheel pattern, caliper colour, intakes and aero.
+- Added `src/world/carbody.js`, a surfacing engine that imports nothing and returns typed arrays:
+  sections built from named control points with doubled crease points, an authored side profile, a
+  hood and engine-cover valley, closing bumpers, and wheel arches cut as the upper half of a circle
+  centred on each axle. The greenhouse lofts separately and splits into glazing, painted roof panel
+  and painted A/C pillars.
+- Added `src/world/carparts.js`: per-car light glyphs (four-point rings, hexagonal Y, hooked,
+  boomerang, tri-bar, full-width bar, four round tails), wheels with real staggered tyres, spoke
+  patterns and calipers, bumper apertures, side intakes, splitter, diffuser, five wing types,
+  exhaust layouts, mirrors, shutlines and a cabin interior.
+- Rewrote `src/world/carmodel.js` as assembly plus materials over a per-car geometry cache, so a full
+  grid costs one build per model and clones only materials. Roughly 10k triangles per car.
+- Made the blueprint the single source of truth: `src/data/cars.js` now takes each car's dimensions,
+  wheel radius and track from it, so the physics measures the same car the renderer draws.
+- Added `tools/car-contact-sheet.mjs`, which photographs the roster from three fixed angles under
+  studio lighting into `output/cars/`.
+
+Verification:
+
+- `npm test` passed - 392 assertions, up from 145. The new section builds all twelve bodies in plain
+  Node and asserts each is within 30 mm of its published length, width and height, has an exact
+  wheelbase matching both the blueprint and the physics, runs staggered tyres, keeps both axles
+  inside the body, clears its wheels with its arches, builds glass, roof and pillars, stays inside
+  the triangle budget and indexes inside its own vertex buffer.
+- `npm run smoke` passed.
+- Contact sheets and race screenshots reviewed at each step. That loop caught the roof panel being
+  buried inside near-black glass, the beltline sitting so high across the roster that the glasshouse
+  read as a canopy, blunt slab bumpers from the loft's end caps, and z-fighting where shutlines,
+  accent stripes and lamps were coplanar with the body.
+
+Next additions to consider:
+
+- Livery and paint customisation, including wraps and rim colour, saved per car.
+- Damage and repair economy with visible panel deformation.
+- Ghost laps, per-track leaderboards and a replay camera.
+- Ambient traffic on the city circuits, distinct from the rival field.
+
+### 2026-09-06 - Astra-Tier 3D Revamp
+
+Objective: Rebuild Nightline Racer to the quality bar set by the best browser games people are
+showing off from GPT-6 Astra - real 3D on Three.js, cars that transfer weight and slide, drivetrain
+audio, several distinct circuits, and a payout loop that buys upgrades you can see.
+
+Completed:
+
+- Vendored Three.js 0.185.1 (`src/vendor/three/`) plus only the postprocessing, shader and
+  geometry-utils addons in use; `index.html` resolves them through an import map, so the game stays
+  offline and build-free.
+- Replaced the pseudo-3D canvas renderer with a WebGL2 scene: ACES tone mapping, soft shadows, and a
+  post chain of bloom, a combined speed-blur/aberration/vignette pass and SMAA, across four quality
+  tiers that step down at runtime instead of stuttering.
+- Replaced the arcade speed model with a single-track vehicle model in curvilinear track
+  coordinates: Pacejka-style tyre curve peaking near six degrees of slip, longitudinal load
+  transfer, torque curve through real gear ratios, traction-circle limited drive, downforce,
+  per-surface grip, handbrake and barrier impulses. Final drive is solved from each car's published
+  top speed, so every car hits its spec-sheet number at the limiter in top gear.
+- Added four authored circuits (Nightline Bay, Ridge Pass, Downtown Grid, Coast Sunset), each lofted
+  from a closed spline into road, geometry lane markings, kerbs, run-off, barriers, gantries and
+  instanced scenery, with its own palette, weather and lighting.
+- Grew the roster to twelve cars with simulation, body and audio parameters, each lofted
+  procedurally and shown live on a garage turntable; added eight upgrade parts that feed the physics
+  and a career economy that spends cash on cars and parts.
+- Grew the contract list to nine: circuit, sprint, time attack, speed trap, heat escape, drift zone,
+  checkpoint gauntlet, elimination and a boss race, unlocking by driver level.
+- Rivals and police now run the same physics as the player through a Stanley path tracker and a
+  lookahead speed planner, with bounded rubber-banding.
+- Replaced the single-oscillator engine drone with synthesised per-car audio: engine harmonics on
+  live RPM, turbo spool, blow-off, tyre squeal, wind, sirens, impacts and UI.
+- Rebuilt the shell: the garage is now a window onto the showroom, with a rev counter, minimap,
+  sector deltas, objective bar, race-director feed, four camera rigs and a photo mode.
+
+Verification:
+
+- `npm test` passed - grown from 27 to 145 assertions covering the tyre and chassis model,
+  drivetrain, an acceleration integration against published 0-100 and top-speed figures, all four
+  circuits, the driver model, pursuit, scoring, upgrades, the career economy and a complete race.
+- `npm run smoke` passed - drives the real game in a real browser, proves the WebGL2 scene renders
+  by reading the framebuffer, works the garage economy, drives with the keyboard, visits every
+  circuit, finishes a race for its payout, and checks the mobile layout. Screenshots under
+  `output/playwright`.
+- Screenshots reviewed at each step; this is what caught the cars rendering nose-backwards, the sky
+  sphere clipping against the far plane, lane markings vanishing into the mip chain, and the camera
+  panning from the world origin at the start of a race.
+
+Next additions to consider:
+
+- Livery and paint customisation saved per car.
+- Damage and repair economy with visible panel deformation.
+- Ghost laps, per-track leaderboards and a replay camera.
+- Ambient traffic on the city circuits, distinct from the rival field.
+- Engine swaps and a dyno screen showing the torque curve a build actually produces.
+
 ### 2026-06-17 - Career Event Hub
 
 Objective: Move closer to AAA/EA-style racing standards by adding progression, event variety, and persistent reward loops after researching current racing-game benchmarks.

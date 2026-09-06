@@ -1,0 +1,1 @@
+three 0.185.1 (MIT) vendored from npm: build/three.module.min.js, build/three.core.min.js and the postprocessing/shaders/utils addons used by the renderer. Do not edit; re-vendor with 'npm pack three@<version>'.
