@@ -1,0 +1,19 @@
+# Nightline Racer is a static, build-free game: ES modules resolved through an import map, with
+# Three.js vendored into the repo. The "build" only assembles the publishable subset into dist/,
+# so the deploy carries the game and not the tests, tools, docs or node_modules.
+
+[build]
+  command = "node tools/build-site.mjs"
+  publish = "dist"
+
+# The vendored engine and the game sources are versioned by commit, so they can be cached hard;
+# the page itself must always be revalidated so a deploy is picked up immediately.
+[[headers]]
+  for = "/src/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
