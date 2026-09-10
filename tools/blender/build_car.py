@@ -341,6 +341,11 @@ def build_wheels(body, car_id):
     blueprint's tyre codes are staggered, and set on the published track width.
     """
     rim = body.bp["rim"]
+    # One rubber and one rim datablock for all four wheels. Building them inside the loop gives
+    # four copies of each, which Blender suffixes .001/.002 and glTF exports as distinct
+    # materials - so the runtime cannot batch them and every duplicate costs a draw call.
+    rubber = paint_material("tyre", (0.013, 0.019, 0.022), 0.02, 0.90, 0.0, 0.0)
+    face = paint_material("rim", srgb_to_linear(rim["colour"]), 0.91, 0.21, 0.0, 0.0)
     wheels = []
     for which, axle, tyre in (("front", body.front_axle, body.tyre_front),
                               ("rear", body.rear_axle, body.tyre_rear)):
@@ -362,8 +367,6 @@ def build_wheels(body, car_id):
             for polygon in obj.data.polygons:
                 polygon.use_smooth = True
 
-            rubber = paint_material("tyre", (0.013, 0.019, 0.022), 0.02, 0.90, 0.0, 0.0)
-            face = paint_material("rim", srgb_to_linear(rim["colour"]), 0.91, 0.21, 0.0, 0.0)
             obj.data.materials.append(rubber)
             obj.data.materials.append(face)
             # The flat ends of the cylinder are the rim face; the tread band is rubber.
